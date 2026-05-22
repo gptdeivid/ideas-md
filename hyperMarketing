@@ -1,0 +1,253 @@
+# GTM Hackathon CDMX — May 23–24, 2026
+## Metis × Echo × Video Commerce
+### AI-Powered Warm Outreach Pipeline for LATAM B2B
+
+> *"Del lead frío al cierre empático — en menos de 2 minutos, sin CRM, sin fricción."*
+
+---
+
+## 1. EL PROBLEMA
+
+Los equipos de ventas B2B en LATAM pierden entre el **60–70% de sus leads cálidos** por tres razones:
+
+1. **El follow-up llega tarde** — el lead ya perdió el interés o fue captado por la competencia.
+2. **El mensaje es genérico** — un template que no reconoce el contexto ni el tono del prospecto.
+3. **El canal es incorrecto** — se manda un email que nadie abre en lugar de aparecer donde el cliente ya vive (Slack, WhatsApp).
+
+**El resultado:** ciclos de venta largos, equipos comerciales quemados, y churn en onboarding porque la promesa de venta nunca se personalizó.
+
+**Esto le cuesta a empresas como Tangering su tasa de cobranza empática. A Habi, su conversión en onboarding masivo. A Rappi, su activación de partners B2B.**
+
+---
+
+## 2. LA SOLUCIÓN
+
+**Un pipeline GTM autónomo de 3 pasos que convierte un lead enriquecido en una conversación que cierra.**
+
+```
+Clay (enriquecimiento)
+  └─► Metis — Claude lee el contexto emocional del lead
+        └─► Video personalizado — script + voz humana ElevenLabs
+              └─► Echo en Slack — concierge que agenda y cierra
+```
+
+No es un CRM. No es un chatbot genérico. Es el **WeChat Commerce Model aplicado a ventas B2B LATAM**: video de confianza + conversación en el canal nativo + cierre en piloto automático.
+
+---
+
+## 3. FLUJO TÉCNICO
+
+### ENTRADA — Clay (Enriquecimiento de Lead)
+
+- Clay extrae datos del prospecto desde LinkedIn, Apollo, web scraping.
+- Campos clave: `nombre`, `empresa`, `cargo`, `industria`, `señal de compra`, `tono inferido`.
+- Clay dispara un **webhook HTTP** cuando el lead cumple criterios de "warm" (visita, apertura, trigger manual).
+- El payload llega a Supabase o directo al endpoint de Metis.
+
+**Payload de ejemplo:**
+```json
+{
+  "lead": {
+    "nombre": "Andrés Noero",
+    "empresa": "Tangering AI",
+    "cargo": "CEO",
+    "industria": "Fintech / Cobranza",
+    "pain_point": "Automatizar cobranza sin perder trato humano",
+    "señal": "Visitó página de pricing hace 2 horas",
+    "tono_inferido": "directo, orientado a resultados, valora empatía"
+  }
+}
+```
+
+---
+
+### PASO 1 — Agente Metis (El Investigador Empático)
+
+**Stack:** LangGraph + Claude (Anthropic) + Supabase RAG
+
+**Función:**
+- Recibe el payload de Clay.
+- Claude analiza el contexto emocional y profesional del lead.
+- Genera tres outputs:
+  1. `script_video` — 4–6 oraciones personalizadas para el video (tono adaptado).
+  2. `opening_message` — primer mensaje de Echo post-video.
+  3. `objection_map` — las 2–3 objeciones probables y cómo responderlas.
+
+**Prompt core de Metis:**
+```
+Eres un investigador empático de ventas B2B LATAM.
+Dado el contexto del lead, redacta un script de video de 40 segundos
+que resuelva su pain point específico, en su tono, sin sonar a template.
+Incluye el nombre de la empresa y una referencia concreta a su industria.
+Output en JSON: { script_video, opening_message, objection_map }
+```
+
+**Tiempo de procesamiento estimado:** 3–6 segundos.
+
+---
+
+### PASO 2 — Motor de Video (Script to Motion)
+
+**Stack:** Script-to-Motion (David) + ElevenLabs TTS + Renderizado bajo demanda
+
+**Función:**
+- Recibe `script_video` de Metis.
+- ElevenLabs genera la voz en off: tono pausado, cercano, humano (no robótico).
+- El video se renderiza con diseño limpio: nombre del lead, logo de su empresa, branding del vendedor.
+- Output: video `.mp4` de 30–45 segundos alojado en URL accesible.
+
+**Especificaciones de video:**
+- Duración: 30–45 seg
+- Formato: 16:9 o vertical (adaptable)
+- Voz: ElevenLabs, voz en español neutro/mexicano según el mercado
+- Texto on-screen: nombre del lead + pain point en 1 línea
+- CTA final: "Agendemos 15 minutos" con link directo
+
+**Tiempo de renderizado estimado:** 20–40 segundos.
+
+---
+
+### PASO 3 — Agente Echo (El WeChat Concierge)
+
+**Stack:** Echo (custom) + Slack API + Make (orquestación) + LangGraph
+
+**Función:**
+- Make orquesta la entrega: recibe la URL del video desde el paso 2.
+- Echo abre un DM en Slack al lead (o canal compartido con el cliente) y envía el video.
+- Adjunta el `opening_message` generado por Metis.
+- Mantiene conversación en contexto: recuerda el pain point, el historial, el tono.
+- Usa modismos locales según el mercado (MX, CO, etc.).
+- Agenda demo o cita directo en Google Calendar vía link o integración.
+
+**Capacidades de Echo:**
+- Memoria de conversación persistente (Supabase).
+- Detección de intención: `interesado`, `objeción`, `listo para agendar`, `no interesado`.
+- Escalado automático a humano si la conversación lo requiere.
+
+**Tiempo de respuesta de Echo:** < 2 segundos.
+
+---
+
+### RESULTADO TOTAL: Lead warm → Video entregado → Conversación abierta
+
+**Tiempo total del pipeline:** < 2 minutos desde el trigger de Clay.
+
+---
+
+## 4. ARQUITECTURA TÉCNICA
+
+```
+┌─────────────────────────────────────────────────────┐
+│  CAPA DE DATOS                                      │
+│  Clay ──► Supabase (leads + historial de Echo)      │
+└──────────────────────┬──────────────────────────────┘
+                       │ webhook
+┌──────────────────────▼──────────────────────────────┐
+│  CAPA DE INTELIGENCIA                               │
+│  Metis (LangGraph + Claude Sonnet)                  │
+│  ├── RAG sobre contexto de industria LATAM          │
+│  ├── Análisis emocional del lead                    │
+│  └── Generación de script + objection map           │
+└──────────────────────┬──────────────────────────────┘
+                       │ script_video JSON
+┌──────────────────────▼──────────────────────────────┐
+│  CAPA DE VIDEO                                      │
+│  Script-to-Motion + ElevenLabs                      │
+│  └── Video .mp4 on-demand ──► URL pública           │
+└──────────────────────┬──────────────────────────────┘
+                       │ video_url
+┌──────────────────────▼──────────────────────────────┐
+│  CAPA DE ENTREGA Y CIERRE                           │
+│  Make (orquestación) ──► Echo en Slack              │
+│  ├── Entrega el video al lead                       │
+│  ├── Conversación contextual con memoria            │
+│  └── Agendado automático + escalado a humano        │
+└─────────────────────────────────────────────────────┘
+```
+
+**Stack completo de sponsors del hackathon usados:**
+
+| Herramienta | Rol |
+|-------------|-----|
+| Clay | Enriquecimiento y trigger del lead |
+| Anthropic (Claude) | Análisis emocional + generación de script |
+| ElevenLabs | Voz humana en el video |
+| Supabase | Base de datos de leads + memoria de Echo |
+| Make | Orquestación del pipeline |
+| Slack | Canal de entrega + conversación Echo |
+| Cursor | Agilizó el renderizado bajo demanda |
+
+---
+
+## 5. CASOS DE USO (Para los jueces)
+
+### Caso 1 — Tangering AI (Cobranza B2B con empatía)
+> **Pain:** Contactar a deudores con un tono que no genere rechazo ni daño a la relación comercial.
+
+Metis detecta el tono del deudor (evasivo, estresado, colaborativo). El video no suena a cobranza — suena a solución. Echo en Slack mantiene la conversación hasta llegar al acuerdo de pago, con memoria del historial de la cuenta.
+
+### Caso 2 — Habi / Rappi (Onboarding visual masivo)
+> **Pain:** Activar cientos de nuevos partners o propietarios simultáneamente sin que se pierdan en el proceso.
+
+Clay enriquece el perfil del partner (zona, tipo de propiedad, volumen esperado). Metis genera un video de onboarding personalizado por segmento. Echo en Slack guía el proceso paso a paso, responde dudas, y confirma la activación.
+
+---
+
+## 6. SCRIPT DEL DEMO EN VIVO
+
+**Duración total del demo:** 4–5 minutos  
+**Formato:** Pantalla compartida + narración en vivo
+
+---
+
+### ACTO 1 — El problema (30 seg)
+
+> *"Imaginen que tienen 50 leads cálidos hoy. Sus vendedores van a mandar el mismo template a todos, dos días tarde, por email. El 70% no va a responder. Nosotros resolvemos eso — y se los mostramos en tiempo real."*
+
+---
+
+### ACTO 2 — Clay dispara el pipeline (45 seg)
+
+- Mostrar la tabla de Clay con el lead pre-cargado (Andrés Noero, Tangering AI).
+- Activar el webhook manualmente.
+
+> *"Clay identifica que Andrés visitó nuestra página de pricing hace 2 horas. Eso es una señal de compra. Clay dispara el pipeline automáticamente."*
+
+---
+
+### ACTO 3 — Metis analiza el lead (45 seg)
+
+- Mostrar el output JSON de Metis en pantalla.
+
+> *"Metis, potenciado por Claude de Anthropic, no solo lee los datos — lee el contexto emocional. Andrés es directo, valora resultados, y su pain point es cobranza sin perder la relación. Claude genera un script adaptado a eso."*
+
+---
+
+### ACTO 4 — El video se genera (1 min)
+
+- Ejecutar el render del video on-demand.
+- Reproducir el video de 40 seg con la voz de ElevenLabs.
+
+> *"ElevenLabs genera la voz. No es texto a voz robótico — es una voz pausada, humana, que menciona a Tangering por nombre y habla directamente del problema de Andrés."*
+
+---
+
+### ACTO 5 — Echo entrega y conversa en Slack (1 min)
+
+- Mostrar Slack en vivo: Echo envía el video al canal/DM del lead.
+- Simular respuesta del lead ("¿Cuándo podemos hablar?").
+- Echo responde en contexto y propone horario.
+
+> *"Echo lo entrega en Slack — donde Andrés ya vive. Cuando responde, Echo mantiene el contexto completo de la conversación y agenda la demo directo. Cero intervención humana hasta ese punto."*
+
+---
+
+### ACTO 6 — Cierre del pitch (30 seg)
+
+> *"Del trigger en Clay a la cita agendada: menos de 2 minutos. Sin CRM. Sin template genérico. Sin vendedor quemado haciendo follow-up manual. Esto es lo que el video commerce de China lleva 5 años demostrando — y nosotros lo trajimos a LATAM B2B."*
+
+**Slide final: "¿Quieren ver cómo lo adaptamos a su pipeline?"** (dirigido directamente a los jueces de Tangering, Domu, Habi).
+
+---
+
+*GTM Hackathon CDMX · May 23–24, 2026 · Built with Clay, Anthropic, ElevenLabs, Supabase, Make, Slack*
